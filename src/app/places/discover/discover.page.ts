@@ -1,5 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { SegmentChangeEventDetail } from '@ionic/angular';
+import { Subscription } from 'rxjs';
+import { AuthService } from 'src/app/auth/auth.service';
 import { Place } from '../place.model';
 import { PlacesService } from '../places.service';
 
@@ -8,19 +10,40 @@ import { PlacesService } from '../places.service';
   templateUrl: './discover.page.html',
   styleUrls: ['./discover.page.scss'],
 })
-export class DiscoverPage implements OnInit {
+export class DiscoverPage implements OnInit, OnDestroy {
   loadedPlaces: Place[];
   listedLoadedPlaces: Place[];
+  relevantPlaces: Place[];
+  isLoading = true;
+  private placesSub: Subscription;
 
-  constructor(private placesService: PlacesService) { }
+  constructor(private placesService: PlacesService, private authService: AuthService) {}
 
   ngOnInit() {
-    this.loadedPlaces = this.placesService.places;
-    this.listedLoadedPlaces = this.loadedPlaces.slice(1);
+    this.placesService.places.subscribe((places) => {
+      this.loadedPlaces = places;
+      this.relevantPlaces = this.loadedPlaces;
+      this.listedLoadedPlaces = this.relevantPlaces.slice(1);
+    });
   }
 
-  onFilterUpdate(event: CustomEvent<SegmentChangeEventDetail>){
-    console.log(event.detail);
+  ionViewWillEnter(){
+    this.isLoading = true;
+    this.placesService.fetchPlaces().subscribe(() => {
+      this.isLoading = false;
+    });
   }
 
+  onFilterUpdate(event: CustomEvent<SegmentChangeEventDetail>) {
+    if(event.detail.value === 'all'){
+      this.relevantPlaces = this.loadedPlaces;
+      this.listedLoadedPlaces = this.relevantPlaces.slice(1);
+    }else {
+      this.relevantPlaces = this.loadedPlaces.filter(place => place.userId !== this.authService.userId);
+    }
+    this.listedLoadedPlaces = this.relevantPlaces.slice(1);
+  }
+
+  ngOnDestroy(): void {
+  }
 }

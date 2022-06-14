@@ -5,7 +5,7 @@
     </ion-buttons>
     <ion-title>New Offer</ion-title>
     <ion-buttons slot="primary">
-      <ion-button (click)="onCreateOffer()" [disabled]="form.invalid"></ion-button>
+      <ion-button (click)="onCreateOffer()"></ion-button>
       <ion-icon name="checkmark" slot="icon-only"></ion-icon>
     </ion-buttons>
   </ion-toolbar>
@@ -55,6 +55,11 @@
             <ion-label position="floating">Available to</ion-label>
             <ion-datetime min="2022-01-01" max="2022-03-29" formControlName="dateTo"></ion-datetime>
           </ion-item>
+        </ion-col>
+      </ion-row>
+      <ion-row>
+        <ion-col sizeSm="3" offsetSm="3" class="ion-text-center">
+          <app-location-picker (locationPick)="onLocationPicked($event)"></app-location-picker>
         </ion-col>
       </ion-row>
     </ion-grid>
