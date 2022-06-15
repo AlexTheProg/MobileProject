@@ -37,7 +37,7 @@ export class PlaceDetailPage implements OnInit, OnDestroy {
     private bookingService: BookingService,
     private loadingCtrl: LoadingController,
     private authService: AuthService,
-    private alertCtrl: AlertController,
+    private alertCtrl: AlertController
   ) {}
 
   ngOnInit() {
@@ -48,32 +48,41 @@ export class PlaceDetailPage implements OnInit, OnDestroy {
       }
       this.isLoading = true;
       let fetchedUserId: string;
-      this.authService.userId.pipe(switchMap((userId: any) => {
-        if(!userId){
-          throw new Error('Found no user');
-        }
-        fetchedUserId = userId;
-        return this.placesService.getPlace(paramMap.get('placeId'));
-      })).subscribe((place) => {
-          this.isLoading = false;
-          this.place = place;
-          this.isBookable = place.userId !== fetchedUserId;
-        }, error => {
-          this.alertCtrl.create({
-            header: 'An error occured!',
-            message: 'Could not load place.',
-            buttons: [
-              {
-                text: 'Okay',
-                handler: () => {
-                  this.router.navigate(['/places/tabs/discover']);
-                }
-              }
-            ]
-          }).then(alertEl => {
-            alertEl.present();
-          });
-        });
+      this.authService.userId
+        .pipe(
+          switchMap((userId: any) => {
+            if (!userId) {
+              throw new Error('Found no user');
+            }
+            fetchedUserId = userId;
+            return this.placesService.getPlace(paramMap.get('placeId'));
+          })
+        )
+        .subscribe(
+          (place) => {
+            this.isLoading = false;
+            this.place = place;
+            this.isBookable = place.userId !== fetchedUserId;
+          },
+          (error) => {
+            this.alertCtrl
+              .create({
+                header: 'An error occured!',
+                message: 'Could not load place.',
+                buttons: [
+                  {
+                    text: 'Okay',
+                    handler: () => {
+                      this.router.navigate(['/places/tabs/discover']);
+                    },
+                  },
+                ],
+              })
+              .then((alertEl) => {
+                alertEl.present();
+              });
+          }
+        );
     });
   }
 
@@ -144,20 +153,28 @@ export class PlaceDetailPage implements OnInit, OnDestroy {
       });
   }
 
-  onShowFullMap(){
-    this.modalCtrl.create({
-      component: MapModalComponent, componentProps:{
-        center: {lat: this.place.location.lat, lng: this.place.location.lng},
-        selectable: false,
-        closeButtonText: 'Close',
-        title: this.place.location.address
-      }
-    }).then(modalEl =>{
-      modalEl.present();
-    });
+  onShowFullMap() {
+    this.modalCtrl
+      .create({
+        component: MapModalComponent,
+        componentProps: {
+          center: {
+            lat: this.place.location.lat,
+            lng: this.place.location.lng,
+          },
+          selectable: false,
+          closeButtonText: 'Close',
+          title: this.place.location.address,
+        },
+      })
+      .then((modalEl) => {
+        modalEl.present();
+      });
   }
 
   ngOnDestroy(): void {
-    this.placeSub.unsubscribe();
+    if (this.placeSub) {
+      this.placeSub.unsubscribe();
+    }
   }
 }
