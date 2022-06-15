@@ -1,11 +1,12 @@
 /* eslint-disable no-underscore-dangle */
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, of } from 'rxjs';
+import { BehaviorSubject, Observable, of } from 'rxjs';
 import { AuthService } from '../auth/auth.service';
 import { Place } from './place.model';
 import { take, map, tap, delay, switchMap } from 'rxjs/operators';
 import { HttpClient } from '@angular/common/http';
 import { PlaceLocation } from './location.model';
+import { concat } from 'rxjs';
 
 interface PlaceData {
   availableFrom: string;
@@ -36,17 +37,20 @@ export class PlacesService {
         `https://ionic-angular-app-d20fe-default-rtdb.europe-west1.firebasedatabase.app/offered-places/${id}.json`
       )
       .pipe(
-        map((placeData) => new Place(
-            id,
-            placeData.title,
-            placeData.description,
-            placeData.imageUrl,
-            placeData.price,
-            new Date(placeData.availableFrom),
-            new Date(placeData.availableTo),
-            placeData.userId,
-            placeData.location
-          ))
+        map(
+          (placeData) =>
+            new Place(
+              id,
+              placeData.title,
+              placeData.description,
+              placeData.imageUrl,
+              placeData.price,
+              new Date(placeData.availableFrom),
+              new Date(placeData.availableTo),
+              placeData.userId,
+              placeData.location
+            )
+        )
       );
   }
 
@@ -92,33 +96,39 @@ export class PlacesService {
     location: PlaceLocation
   ) {
     let generatedId: string;
-    const newPlace = new Place(
-      Math.random().toString(),
-      title,
-      description,
-      'https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Paris_montage2.jpg/450px-Paris_montage2.jpg',
-      price,
-      dateFrom,
-      dateTo,
-      this.authService.userId,
-      location
-    );
-    return this.http
-      .post<{ name: string }>(
-        'https://ionic-angular-app-d20fe-default-rtdb.europe-west1.firebasedatabase.app/offered-places.json',
-        { ...newPlace, id: null }
-      )
-      .pipe(
-        switchMap((resData) => {
-          generatedId = resData.name;
-          return this.places;
-        }),
-        take(1),
-        tap((places) => {
-          newPlace.id = generatedId;
-          this._places.next(places.concat(newPlace));
-        })
-      );
+    let newPlace: Place;
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    return this.authService.userId.pipe(
+      take(1),
+      switchMap((userId: any) => {
+        if (!userId) {
+          throw new Error('NO');
+        }
+        newPlace = new Place(
+          Math.random().toString(),
+          title,
+          description,
+          'https://upload.wikimedia.org/wikipedia/commons/thumb/6/69/Paris_montage2.jpg/450px-Paris_montage2.jpg',
+          price,
+          dateFrom,
+          dateTo,
+          userId,
+          location
+        );
+        return this.http.post<{ name: string }>(
+          'https://ionic-angular-app-d20fe-default-rtdb.europe-west1.firebasedatabase.app/offered-places.json',
+          { ...newPlace, id: null }
+        );
+      }),
+      switchMap((resData: any) => {
+        generatedId = resData.name;
+        return this.places;
+      }),
+      take(1),
+      tap((places: Place[]) => {
+        newPlace.id = generatedId;
+        this._places.next(places.concat(newPlace));
+      }));
 
     // return this._places.pipe(
     //   take(1),
@@ -134,13 +144,13 @@ export class PlacesService {
     return this.places.pipe(
       take(1),
       switchMap((places) => {
-        if (!places || places.length <= 0){
+        if (!places || places.length <= 0) {
           return this.fetchPlaces();
-        }else{
+        } else {
           return of(places);
         }
       }),
-      switchMap(places => {
+      switchMap((places) => {
         const updatedPlaceIndex = places.findIndex(
           (place) => place.id === placeId
         );

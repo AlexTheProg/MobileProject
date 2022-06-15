@@ -49,25 +49,22 @@ export class NewOfferPage implements OnInit {
 
   onCreateOffer() {
     if (!this.form.valid) {
-      console.log(this.form);
       return;
     }
-    console.log(this.form);
-
     this.loadingCtrl
       .create({
-        message: 'Creating new place...',
+        message: 'Creating place...'
       })
-      .then((loadingEl) => {
+      .then(loadingEl => {
         loadingEl.present();
         this.placesService
           .addPlace(
-            this.form.get('title').value,
-            this.form.get('description').value,
-            +this.form.get('price').value,
-            new Date(this.form.get('dateFrom').value),
-            new Date(this.form.get('dateTo').value),
-            this.form.get('location').value
+            this.form.value.title,
+            this.form.value.description,
+            +this.form.value.price,
+            new Date(this.form.value.dateFrom),
+            new Date(this.form.value.dateTo),
+            this.form.value.location
           )
           .subscribe(() => {
             loadingEl.dismiss();
@@ -76,6 +73,7 @@ export class NewOfferPage implements OnInit {
           });
       });
   }
+
 
   onLocationPicked(location: PlaceLocation) {
     this.form.patchValue({

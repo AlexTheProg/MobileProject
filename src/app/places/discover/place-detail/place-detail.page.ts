@@ -8,9 +8,11 @@ import {
   NavController,
 } from '@ionic/angular';
 import { Subscription } from 'rxjs';
+import { switchMap } from 'rxjs/operators';
 import { AuthService } from 'src/app/auth/auth.service';
 import { BookingService } from 'src/app/bookings/booking.service';
 import { CreateBookingsComponent } from 'src/app/bookings/create-bookings/create-bookings.component';
+import { MapModalComponent } from 'src/app/shared/map-modal/map-modal.component';
 import { Place } from '../../place.model';
 import { PlacesService } from '../../places.service';
 
@@ -45,12 +47,17 @@ export class PlaceDetailPage implements OnInit, OnDestroy {
         return;
       }
       this.isLoading = true;
-      this.placeSub = this.placesService
-        .getPlace(paramMap.get('placeId'))
-        .subscribe((place) => {
+      let fetchedUserId: string;
+      this.authService.userId.pipe(switchMap((userId: any) => {
+        if(!userId){
+          throw new Error('Found no user');
+        }
+        fetchedUserId = userId;
+        return this.placesService.getPlace(paramMap.get('placeId'));
+      })).subscribe((place) => {
           this.isLoading = false;
           this.place = place;
-          this.isBookable = place.userId !== this.authService.userId;
+          this.isBookable = place.userId !== fetchedUserId;
         }, error => {
           this.alertCtrl.create({
             header: 'An error occured!',
@@ -135,6 +142,19 @@ export class PlaceDetailPage implements OnInit, OnDestroy {
               });
           });
       });
+  }
+
+  onShowFullMap(){
+    this.modalCtrl.create({
+      component: MapModalComponent, componentProps:{
+        center: {lat: this.place.location.lat, lng: this.place.location.lng},
+        selectable: false,
+        closeButtonText: 'Close',
+        title: this.place.location.address
+      }
+    }).then(modalEl =>{
+      modalEl.present();
+    });
   }
 
   ngOnDestroy(): void {

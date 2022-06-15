@@ -1,8 +1,10 @@
 import { Component, OnInit } from '@angular/core';
 import { NgForm } from '@angular/forms';
 import { Router } from '@angular/router';
-import { LoadingController } from '@ionic/angular';
+import { AlertController, LoadingController } from '@ionic/angular';
+import { Observable } from 'rxjs';
 import { AuthService } from './auth.service';
+import {AuthResponseData} from './auth.service';
 
 @Component({
   selector: 'app-auth',
@@ -16,12 +18,13 @@ export class AuthPage implements OnInit {
   constructor(
     private authService: AuthService,
     private router: Router,
-    private loadingCtrl: LoadingController
+    private loadingCtrl: LoadingController,
+    private alertCtrl: AlertController
   ) {}
 
   ngOnInit() {}
 
-  onLogin() {
+  authenticate(email: string, password: string) {
     this.isLoading = true;
     this.loadingCtrl
       .create({
@@ -30,31 +33,58 @@ export class AuthPage implements OnInit {
       })
       .then((loadingEl) => {
         loadingEl.present();
-        setTimeout(() => {
-          this.isLoading = false;
-          loadingEl.dismiss();
-          this.router.navigateByUrl('/places/tabs/discover');
-        }, 1500);
-      });
+        let authObs: Observable<AuthResponseData>;
+        if(this.isLogin){
+          authObs = this.authService.login(email, password);
+        }else{
+          authObs = this.authService.signup(email, password);
+        }
 
-    this.authService.login();
+        authObs.subscribe(
+          (resData) => {
+            console.log(resData);
+            this.isLoading = false;
+            loadingEl.dismiss();
+            this.router.navigateByUrl('/places/tabs/discover');
+          },
+          (error) => {
+            loadingEl.dismiss();
+            const code = error.error.error.message;
+            let message = 'Could not sign you up, please try again.';
+            if (code === 'EMAIL_EXISTS') {
+              message = 'This email address already exists!';
+            }else if (code === 'EMAIL_NOT_FOUND'){
+              message = 'Email could not be found';
+            }else if (code === 'INVALID_PASSWORD'){
+              message = 'Check your credentials.';
+            }
+            this.showAlert(message);
+          }
+        );
+      });
   }
 
-  onSubmit(form: NgForm){
-    if(!form.valid){
+  onSubmit(form: NgForm) {
+    if (!form.valid) {
       return;
     }
     const email = form.value.email;
     const password = form.value.password;
     console.log(email, password);
-    if(this.isLogin){
-      //send a request to login
-    }else{
-      //sent a request to signup
-    }
+    this.authenticate(email, password);
   }
 
-  onSwitchAuthMode(){
+  onSwitchAuthMode() {
     this.isLogin = !this.isLogin;
+  }
+
+  private showAlert(message: string) {
+    this.alertCtrl
+      .create({
+        header: 'Authentication Failed',
+        message,
+        buttons: ['Okay'],
+      })
+      .then((alertEl) => alertEl.present());
   }
 }
